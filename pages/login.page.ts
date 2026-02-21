@@ -6,6 +6,7 @@ const PASSWORD = '#password';
 const LOGIN_BUTTON = '#login-button';
 const HAMBURGER_MENU = '.bm-burger-button';
 const LOGOUT_LINK = '#logout_sidebar_link';
+const LOCKED_OUT_ERROR = '[data-test="error"]';
 
 /**
  * The LoginPage class represents the login page of the saucedemo application. It provides methods to interact with the login page elements, such as filling in the username and password, clicking the login button, and performing logout actions. The class uses Playwright's Locator and Page objects to define locators for the relevant elements on the login page and to perform actions on those elements.
@@ -18,6 +19,7 @@ export class LoginPage {
     readonly login_button: Locator;
     readonly hamburger_menu: Locator;
     readonly logout_link: Locator;
+    readonly locked_out_error: Locator;
 
     // The constructor initializes the page and locators for the login page. It sets up locators for the page title, username and password input fields, login button, hamburger menu, and logout link. These locators are used in the methods to interact with the elements on the login page.
     constructor(page: Page) {
@@ -28,6 +30,7 @@ export class LoginPage {
         this.login_button = page.locator(LOGIN_BUTTON);
         this.hamburger_menu = page.locator(HAMBURGER_MENU);
         this.logout_link = page.locator(LOGOUT_LINK);
+        this.locked_out_error = page.locator(LOCKED_OUT_ERROR);
     }
 
     // Method to get the page title text content
@@ -50,7 +53,7 @@ export class LoginPage {
     // Method to perform logout action by clicking the hamburger menu and then the logout link. It first checks if the hamburger menu is visible to ensure that the user is logged in before attempting to log out.
     async logout(): Promise<void> {
         await this.isHamburgerMenuVisible() &&
-            await this.hamburger_menu.click();
+        await this.hamburger_menu.click();
         await this.logout_link.click();
     }
 }
