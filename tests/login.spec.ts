@@ -27,4 +27,57 @@ test.describe('Login Tests', () => {
     test('should login successfully and logout successfully via fixture', async ({ loginPage, page }) => {
         await expect(page.locator('[data-test="add-to-cart-sauce-labs-backpack"]')).toBeVisible(); // Verify that we are logged in and on the inventory page
     });
+
+    test('should not be able to login with locked out user', async ({ page }) => {
+        const loginPage = new LoginPage(page);
+        const creds = getUserCredentials('locked_out_user');
+
+        page.goto('/');
+        await loginPage.getPageTitle();
+        await loginPage.login(creds.username, creds.password);
+
+        // Verify that the appropriate error message is displayed for locked out users
+        const errorMessage = loginPage.locked_out_error;
+        await expect(errorMessage).toBeVisible();
+        await expect(errorMessage).toHaveText('Epic sadface: Sorry, this user has been locked out.');
+    });
+
+    test('should be able to login but has problematic behavior', async ({ page }) => {
+        const loginPage = new LoginPage(page);
+        const listingPage = new ListingPage(page);
+        const creds = getUserCredentials('problem_user');
+
+        page.goto('/');
+        await loginPage.getPageTitle();
+        await loginPage.login(creds.username, creds.password);
+
+        // Verify that the user is redirected to the inventory page
+        await expect(page).toHaveURL(/.*saucedemo.com\/inventory.html/);
+
+        // Verify that the images are not displayed for the problematic user
+        const productImages = listingPage.product_images;
+        for (let i = 0; i < await productImages.count(); i++) {
+            await expect(productImages.nth(i)).toHaveAttribute('src', /.*\/static\/media\/sl-404\.168b1cce10384b857a6f\.jpg/); // Verify that the product images have a same src
+        }
+    });
+
+    test('should be able to login but has performance glitch', async ({ page }) => {
+        const loginPage = new LoginPage(page);
+        const listingPage = new ListingPage(page);
+        const creds = getUserCredentials('performance_glitch_user');
+
+        page.goto('/');
+        await loginPage.getPageTitle();
+        await loginPage.login(creds.username, creds.password);
+
+        // Verify that the user is redirected to the inventory page
+        await expect(page).toHaveURL(/.*saucedemo.com\/inventory.html/);
+
+        // Verify that the inventory page load took more than 1 second (performance glitch)
+        const start = Date.now();
+        await listingPage.page.waitForLoadState('load');
+        const elapsed = Date.now() - start;
+        expect(elapsed).toBeGreaterThanOrEqual(1); // Verify that the page load time is greater than or equal to 1 second
+    });
+
 });
