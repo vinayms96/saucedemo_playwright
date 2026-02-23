@@ -7,7 +7,7 @@ import { users } from '../data/user_data';
  */
 export const getUserCredentials = (userType: keyof typeof users) => {
     const username = users[userType].username;
-    const password = process.env.SAUCE_DEMO_PASSWORD || 'secret_sauce'; // Default password for all users in saucedemo
+    const password = process.env.SAUCE_DEMO_PASSWORD || '';
 
     return { username, password };
 }
