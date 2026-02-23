@@ -6,6 +6,9 @@ on:
     branches: [ main ]
 jobs:
   test:
+    environment: prod
+    env:
+      SAUCE_DEMO_PASSWORD: ${{ secrets.SAUCE_DEMO_PASSWORD }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
