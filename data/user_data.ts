@@ -18,3 +18,12 @@ export const users =  {
         username: 'visual_user'
     }
 }
+
+export const paymentInfo = {
+    first_name: 'John',
+    last_name: 'Doe',
+    postal_code: '12345',
+    credit_card: 'SauceCard #31337',
+    shipping: 'Free Pony Express Delivery!',
+    tax: '$2.08'
+}
