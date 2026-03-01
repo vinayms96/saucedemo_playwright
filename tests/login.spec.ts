@@ -13,7 +13,7 @@ test.describe('Login Tests', () => {
         const listingPage = new ListingPage(page);
         const creds = getUserCredentials('standard_user');
 
-        page.goto('/');
+        await page.goto('/');
         await loginPage.getPageTitle();
         await loginPage.login(creds.username, creds.password);
 
@@ -25,14 +25,15 @@ test.describe('Login Tests', () => {
     });
 
     test('should login successfully and logout successfully via fixture', async ({ loginPage, page }) => {
-        await expect(page.locator('[data-test="add-to-cart-sauce-labs-backpack"]')).toBeVisible(); // Verify that we are logged in and on the inventory page
+        const listingPage = new ListingPage(page);
+        await expect(await listingPage.addToCart('Sauce Labs Backpack')).toBeVisible(); // Verify that we are logged in and on the inventory page
     });
 
     test('should not be able to login with locked out user', async ({ page }) => {
         const loginPage = new LoginPage(page);
         const creds = getUserCredentials('locked_out_user');
 
-        page.goto('/');
+        await page.goto('/');
         await loginPage.getPageTitle();
         await loginPage.login(creds.username, creds.password);
 
@@ -47,7 +48,7 @@ test.describe('Login Tests', () => {
         const listingPage = new ListingPage(page);
         const creds = getUserCredentials('problem_user');
 
-        page.goto('/');
+        await page.goto('/');
         await loginPage.getPageTitle();
         await loginPage.login(creds.username, creds.password);
 
@@ -66,7 +67,7 @@ test.describe('Login Tests', () => {
         const listingPage = new ListingPage(page);
         const creds = getUserCredentials('performance_glitch_user');
 
-        page.goto('/');
+        await page.goto('/');
         await loginPage.getPageTitle();
         await loginPage.login(creds.username, creds.password);
 
