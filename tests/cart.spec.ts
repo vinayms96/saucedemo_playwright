@@ -46,6 +46,12 @@ test.describe('Cart tests', () => {
         console.log('product1Description: ', product1Description);
         console.log('product2Description: ', product2Description);
 
+        // Get product prices for the products to be added to cart
+        const product1Price = await product1Card.locator(listingPage.product_prices).allTextContents();
+        const product2Price = await product2Card.locator(listingPage.product_prices).allTextContents();
+        console.log('product1Price: ', product1Price);
+        console.log('product2Price: ', product2Price);
+
         // Add products to cart
         await (await listingPage.addToCart(product1)).click();
         await (await listingPage.addToCart(product2)).click();
@@ -62,7 +68,19 @@ test.describe('Cart tests', () => {
         expect(await product1InCart.locator(cartPage.product_descriptions).allTextContents()).toEqual(product1Description); // Verify that the description of the product 1 in cart is same as the description of product 1 in listing page
         expect(await product2InCart.locator(cartPage.product_descriptions).allTextContents()).toEqual(product2Description); // Verify that the description of the product 2 in cart is same as the description of product 2 in listing page
 
-        // Alternative way to verify that the descriptions of the products in cart are same as the descriptions of the products in listing page
+        // Verify that the prices of the products in cart are same as the prices of the products in listing page
+        expect(await product1InCart.locator(cartPage.product_prices).allTextContents()).toEqual(product1Price); // Verify that the price of the product 1 in cart is same as the price of product 1 in listing page
+        expect(await product2InCart.locator(cartPage.product_prices).allTextContents()).toEqual(product2Price); // Verify that the price of the product 2 in cart is same as the price of product 2 in listing page
+
+        // Alternative way to verify that the descriptions and prices of the products in cart are same as the descriptions and prices of the products in listing page
         expect(await cartPage.product_descriptions.allTextContents()).toEqual([product1Description[0], product2Description[0]]); // Verify that the descriptions of the products in cart are same as the descriptions of the products in listing page
+        expect(await cartPage.product_prices.allTextContents()).toEqual([product1Price[0], product2Price[0]]); // Verify that the prices of the products in cart are same as the prices of the products in listing page
+
+        // Remove products from cart
+        await (await cartPage.removeProduct(product1)).click();
+        await (await cartPage.removeProduct(product2)).click();
+
+        // Verify that the products removed from cart are not visible in the cart page
+        expect(await cartPage.product_names.allTextContents()).toEqual([]);
     });
 });

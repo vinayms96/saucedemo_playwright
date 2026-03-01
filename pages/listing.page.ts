@@ -38,7 +38,7 @@ export class ListingPage {
     }
 
     async getPageTitle(): Promise<Locator> {
-        return (await this.page_title);
+        return this.page_title;
     }
 
     async getProductCards(): Promise<Locator> {
