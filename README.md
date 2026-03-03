@@ -11,6 +11,7 @@ A comprehensive end-to-end (E2E) test automation suite for the [SauceDemo](https
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Running Tests](#running-tests)
+- [Docker Support](#docker-support)
 - [Test Suites](#test-suites)
 - [Page Objects](#page-objects)
 - [Test Data](#test-data)
@@ -42,24 +43,25 @@ saucedemo_playwright/
 │   ├── minicart.spec.ts           # Mini cart badge tests
 │   └── orders.spec.ts             # Complete order workflow tests
 ├── pages/                          # Page Object Model implementations
-│   ├── login-page.ts              # Login page object
-│   ├── listing-page.ts            # Product listing page object
-│   ├── cart-page.ts               # Cart page object
-│   ├── checkout-page.ts           # Checkout page object
-│   ├── confirmation-page.ts       # Order confirmation page object
-│   └── mini-cart-page.ts          # Mini cart page object
+│   ├── login.page.ts              # Login page object
+│   ├── listing.page.ts            # Product listing page object
+│   ├── cart.page.ts               # Cart page object
+│   ├── checkout.page.ts           # Checkout page object
+│   ├── confirmation.page.ts       # Order confirmation page object
+│   └── minicart.page.ts           # Mini cart page object
 ├── fixtures/                       # Custom test fixtures
 │   └── login-page.ts              # Pre-authenticated login fixture
 ├── utils/                          # Utility functions and helpers
 │   ├── credentials.ts             # Credential management
 │   └── enums.ts                   # Enum definitions
 ├── data/                           # Test data files
-│   └── users.json                 # User credentials and test data
-├── config/                         # Configuration files
+│   └── user_data.ts               # User credentials and test data
 ├── playwright.config.ts            # Playwright configuration
 ├── tsconfig.json                  # TypeScript configuration
 ├── package.json                   # Project dependencies
 ├── package-lock.json              # Locked dependency versions
+├── Dockerfile                     # Docker image for containerised test runs
+├── docker-playwright-report/      # HTML report generated from Docker run
 ├── playwright-report/             # HTML test reports (generated)
 ├── test-results/                  # Test execution results (generated)
 └── README.md                       # This file
@@ -75,19 +77,21 @@ saucedemo_playwright/
 - **Parallel Execution:** Tests run in parallel for faster feedback
 - **HTML Reporting:** Beautiful HTML reports with screenshots and test traces
 - **CI/CD Ready:** GitHub Actions integration for automated testing on pull requests and commits
-- **Chromium Browser:** Configured for desktop Chrome testing (Firefox and Safari support available)
+- **Docker Support:** Containerised test execution via the official Playwright Docker image
+- **Multi-Browser:** Chromium and Firefox enabled by default
 
 ## Prerequisites
 
 - **Node.js:** v20 or higher
 - **npm:** v10 or higher
 - **Git:** For version control
+- **Docker** *(optional):* For containerised test runs
 
 ## Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/vinayms96/saucedemo_playwright.git
    cd saucedemo_playwright
    ```
 
@@ -105,13 +109,13 @@ saucedemo_playwright/
 
 ### Environment Variables
 
-Set the following environment variable for CI/CD environments:
+Set the following environment variable before running tests:
 
 ```bash
 export SAUCE_DEMO_PASSWORD=<your_password>
 ```
 
-The password defaults to `secret_sauce` if not specified in the environment.
+If `SAUCE_DEMO_PASSWORD` is not set, the password defaults to an empty string and tests requiring authentication will fail. Always ensure this variable is set in both local and CI environments.
 
 ### Playwright Configuration
 
@@ -119,7 +123,7 @@ The `playwright.config.ts` file contains:
 
 - **Base URL:** https://www.saucedemo.com
 - **Default Timeout:** 30 seconds per action (default)
-- **Browsers:** Chromium (Primary)
+- **Browsers:** Chromium and Firefox (both enabled by default)
 - **Parallel Execution:** Enabled by default
 - **Reporters:** HTML reporter for visual test reports
 
@@ -132,26 +136,6 @@ The `playwright.config.ts` file contains:
 - 5 workers for parallel execution
 - Trace collection on first retry for debugging
 - Strict mode enabled (forbidOnly check)
-
-### Browser Configuration
-
-The `playwright.config.ts` includes commented options for multi-browser testing:
-
-```typescript
-// Firefox
-// { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-
-// Webkit (Safari)
-// { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-
-// Mobile Chrome
-// { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
-
-// Mobile Safari
-// { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
-```
-
-Uncomment any browser to enable multi-browser testing.
 
 ## Running Tests
 
@@ -203,18 +187,46 @@ npx playwright show-report
 npx playwright test --workers=1
 ```
 
+## Docker Support
+
+The project includes a `Dockerfile` based on the official Playwright image, which provides a fully configured environment with all required browsers pre-installed.
+
+### Build the Docker Image
+
+```bash
+docker build -t saucedemo-playwright .
+```
+
+### Run Tests in Docker
+
+```bash
+docker run --rm \
+  -e SAUCE_DEMO_PASSWORD=<your_password> \
+  saucedemo-playwright
+```
+
+### Extract the HTML Report from Docker
+
+```bash
+docker run --rm \
+  -e SAUCE_DEMO_PASSWORD=<your_password> \
+  -v $(pwd)/docker-playwright-report:/app/playwright-report \
+  saucedemo-playwright
+```
+
+The `docker-playwright-report/` directory in this repository contains an HTML report from a previous Docker run and can be opened in any browser.
+
 ## Test Suites
 
 ### 1. Login Tests (`tests/login.spec.ts`)
 
 Tests user authentication and login functionality:
 
-- **Standard User Login:** Valid credentials login
-- **Locked Out User:** Validation of locked account behavior
-- **Problem User:** Login with problematic user account
-- **Performance Glitch User:** Login with performance issues
-- **Error User:** Login with error user account
-- **Logout:** Verify logout functionality
+- **Standard User Login:** Valid credentials login and redirect to inventory page
+- **Fixture Login + Logout:** Login via the pre-authenticated fixture, verifying automatic logout
+- **Locked Out User:** Verifies the correct error message is displayed for locked accounts
+- **Problem User:** Logs in and verifies all product images share the broken placeholder `src`
+- **Performance Glitch User:** Logs in and confirms the page load time is measurable
 
 **Total Tests:** 5
 
@@ -222,9 +234,9 @@ Tests user authentication and login functionality:
 
 Tests product inventory and listing page functionality:
 
-- **Add to Cart:** Adding products to the shopping cart
-- **Remove from Cart:** Removing products from the shopping cart
-- **Product Display:** Verify product information is correctly displayed
+- **Product Count:** Verifies exactly 6 products are displayed on the inventory page
+- **Sorting — Name:** Validates A→Z default order and Z→A after selecting the dropdown option
+- **Sorting — Price:** Validates low-to-high and high-to-low price sorting via dropdown
 
 **Total Tests:** 3
 
@@ -232,8 +244,8 @@ Tests product inventory and listing page functionality:
 
 Tests shopping cart operations:
 
-- **Remove from Cart:** Remove items from the cart page
-- **Checkout Navigation:** Proceed to checkout from cart
+- **Remove from Cart:** Adds two products and verifies they are fully removed via the cart page remove buttons
+- **Cart Contents Verification:** Adds two products and cross-checks names, descriptions, and prices against the listing page values
 
 **Total Tests:** 2
 
@@ -241,8 +253,8 @@ Tests shopping cart operations:
 
 Tests mini cart badge and quick interactions:
 
-- **Mini Cart Badge Update:** Verify cart count badge updates correctly
-- **Mini Cart Interactions:** Mini cart icon and badge interactions
+- **Badge Add & Remove:** Verifies the badge is absent initially, shows `2` after adding products, and disappears after removing them from the listing page
+- **Badge After Add:** Verifies the badge count updates to `2` when two products are added to cart
 
 **Total Tests:** 2
 
@@ -251,79 +263,75 @@ Tests mini cart badge and quick interactions:
 Tests the complete end-to-end order placement workflow:
 
 - **Complete Order Flow:**
-  - Login with valid credentials
-  - Add products to cart
-  - Proceed to checkout
-  - Fill checkout information
-  - Complete order
-  - Verify order confirmation
+  - Login via fixture
+  - Capture product descriptions and prices from the listing page
+  - Add products to cart and navigate to the cart page
+  - Proceed to checkout and fill in personal information
+  - Verify checkout overview (product details, payment info, shipping info, item total, tax, and grand total)
+  - Complete the order and verify the confirmation message
+  - Navigate back to the products page
 
 **Total Tests:** 1 comprehensive workflow test
 
-**Overall Test Count:** 13+ individual tests
+**Overall Test Count:** 13 individual tests × 2 browsers = 26 test runs
 
 ## Page Objects
 
-### LoginPage (`pages/login-page.ts`)
+### LoginPage (`pages/login.page.ts`)
 
 Handles all login-related interactions:
 
-- `login(username, password)` - Authenticate user
-- `logout()` - Sign out user
-- `fillUsername(username)` - Enter username
-- `fillPassword(password)` - Enter password
-- `clickLoginButton()` - Submit login form
-- Error message validation
+- `login(username, password)` — Fill credentials and submit the login form
+- `logout()` — Open the hamburger menu and click the logout link
+- `getPageTitle()` — Return the page logo text
+- `isHamburgerMenuVisible()` — Check whether the user is currently logged in
+- Locators: `username`, `password`, `login_button`, `hamburger_menu`, `logout_link`, `locked_out_error`
 
-### ListingPage (`pages/listing-page.ts`)
+### ListingPage (`pages/listing.page.ts`)
 
 Manages product listing page interactions:
 
-- `addProductToCart(productName)` - Add product to cart
-- `removeProductFromCart(productName)` - Remove product from cart
-- `verifyProductExists(productName)` - Check product availability
-- Product sorting and filtering options
-- Cart badge updates
+- `addToCart(productName)` — Return the add-to-cart locator for the named product
+- `removeFromCart(productName)` — Return the remove-from-cart locator for the named product
+- `getProductCards()` — Return a locator for all inventory item cards
+- `getProductCount()` — Return the number of products displayed
+- `getProductNames()` — Return an array of all product name strings
+- `getProductDescriptions()` — Return an array of all product description strings
+- `getProductPrices()` — Return an array of all product prices as numbers
+- Locators: `page_title`, `product_images`, `product_cards`, `product_names`, `product_descriptions`, `product_prices`, `sort_dropdown`
 
-### CartPage (`pages/cart-page.ts`)
+### CartPage (`pages/cart.page.ts`)
 
 Handles shopping cart operations:
 
-- `verifyCartItems()` - Validate cart contents
-- `removeFromCart(productName)` - Remove item from cart
-- `proceedToCheckout()` - Navigate to checkout
-- Cart item count verification
+- `removeProduct(productName)` — Return the remove-button locator for the named product
+- Locators: `product_cards`, `product_names`, `product_descriptions`, `product_prices`, `checkout_button`
 
-### CheckoutPage (`pages/checkout-page.ts`)
+### CheckoutPage (`pages/checkout.page.ts`)
 
-Manages checkout process:
+Manages the checkout process:
 
-- `fillCheckoutInfo(firstName, lastName, postalCode)` - Enter checkout details
-- `continueCheckout()` - Proceed to order review
-- `completeOrder()` - Submit order
-- Form validation and error handling
+- `fillCheckoutInformation(firstName, lastName, postalCode)` — Fill in the checkout form fields
+- Locators: `checkout_step_title`, `first_name_input`, `last_name_input`, `postal_code_input`, `continue_button`, `finish_button`, `product_names`, `product_descriptions`, `product_prices`, `payment_information_label`, `payment_information_value`, `shipping_information_label`, `shipping_information_value`, `item_total_label`, `tax_label`, `total_label`
 
-### ConfirmationPage (`pages/confirmation-page.ts`)
+### ConfirmationPage (`pages/confirmation.page.ts`)
 
 Validates order completion:
 
-- `verifyOrderConfirmation()` - Confirm successful order
-- `backToProducts()` - Return to product listing
-- Success message validation
+- Locators: `confirmation_header`, `confirmation_message`, `back_home_button`
 
-### MiniCartPage (`pages/mini-cart-page.ts`)
+### MiniCartPage (`pages/minicart.page.ts`)
 
-Handles mini cart badge and quick interactions:
+Handles mini cart badge and navigation:
 
-- `verifyCartBadge()` - Check cart item count badge
-- `clickCartIcon()` - Open full cart view
-- Badge update verification
+- `minicartBadge()` — Return the cart item count badge locator
+- `minicartIcon()` — Return the cart icon container locator
 
 ## Test Data
 
 ### Test Users
 
-The project includes multiple test user accounts defined in `data/users.json`:
+The project includes multiple test user accounts defined in `data/user_data.ts`:
 
 | Username | Type | Purpose |
 |----------|------|---------|
@@ -334,17 +342,18 @@ The project includes multiple test user accounts defined in `data/users.json`:
 | `error_user` | Error | Tests error handling |
 | `visual_user` | Visual | Tests visual regression scenarios |
 
-**Default Password:** `secret_sauce`
-
 ### Payment Information
 
-Test payment data (`data/users.json`):
+Test payment and order data (`data/user_data.ts`):
 
-```json
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "postalCode": "12345"
+```typescript
+export const paymentInfo = {
+    first_name: 'John',
+    last_name: 'Doe',
+    postal_code: '12345',
+    credit_card: 'SauceCard #31337',
+    shipping: 'Free Pony Express Delivery!',
+    tax: '$2.08'
 }
 ```
 
@@ -352,33 +361,32 @@ Test payment data (`data/users.json`):
 
 The `utils/credentials.ts` utility provides:
 
-- Environment variable support for `SAUCE_DEMO_PASSWORD`
-- Default password fallback (`secret_sauce`)
-- User credential retrieval for all test users
+- `getUserCredentials(userType)` — Returns `{ username, password }` for the given user type
+- Password is read from the `SAUCE_DEMO_PASSWORD` environment variable
+- User types are type-safe: only keys defined in `data/user_data.ts` are accepted
 
 ## Custom Fixtures
 
 ### Login Fixture (`fixtures/login-page.ts`)
 
-A pre-configured test fixture that automatically logs in before each test:
+A pre-configured test fixture that automatically logs in before each test and logs out after:
 
 **Usage:**
 
 ```typescript
 import { test } from '../fixtures/login-page';
 
-test('test with automatic login', async ({ loginPage }) => {
+test('test with automatic login', async ({ loginPage, page }) => {
   // loginPage is already authenticated and on the inventory page
-  await loginPage.verifyProductsPage();
 });
 ```
 
 **Features:**
 
-- Automatic login before test execution
-- Automatic logout after test execution
-- Access to authenticated `loginPage` context
-- Assertion verification for login/logout states
+- Navigates to `/` and logs in as `standard_user` before the test
+- Asserts that the inventory page title reads `Products` and the URL matches `/inventory.html`
+- Provides the authenticated `loginPage` instance to the test
+- After the test completes, calls `logout()` and asserts the user is returned to the login page
 
 ## CI/CD Integration
 
@@ -393,7 +401,7 @@ The project includes an automated CI/CD pipeline (`.github/workflows/playwright.
   2. Install Playwright browsers (`npx playwright install`)
   3. Run all tests (`npx playwright test`)
   4. Upload HTML reports as artifacts (30-day retention)
-- **Environment Variables:** `SAUCE_DEMO_PASSWORD` from GitHub Secrets
+- **Environment Variables:** `SAUCE_DEMO_PASSWORD` from GitHub Secrets (`prod` environment)
 
 ### Setting Up CI/CD
 
@@ -402,23 +410,18 @@ The project includes an automated CI/CD pipeline (`.github/workflows/playwright.
    - Go to GitHub repository Settings → Secrets and variables → Actions
    - Add new secret: `SAUCE_DEMO_PASSWORD`
    - Set value to the SauceDemo password
-3. Push to `main` branch - tests will automatically run
+3. Push to `main` branch — tests will automatically run
 
 ## Browser Configuration
 
 ### Currently Enabled
 
 - **Chromium:** Desktop Chrome configuration
+- **Firefox:** Desktop Firefox configuration
 
 ### Optional Browsers (Commented in Config)
 
 To enable additional browsers, uncomment the respective configuration in `playwright.config.ts`:
-
-#### Firefox
-
-```typescript
-{ name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-```
 
 #### Webkit (Safari)
 
@@ -438,14 +441,14 @@ To enable additional browsers, uncomment the respective configuration in `playwr
 { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
 ```
 
-### Running Tests on Specific Browser
+### Running Tests on a Specific Browser
 
 ```bash
-# Run only on Firefox (if enabled)
-npx playwright test --project=firefox
-
 # Run only on Chromium
 npx playwright test --project=chromium
+
+# Run only on Firefox
+npx playwright test --project=firefox
 ```
 
 ## Troubleshooting
@@ -458,16 +461,16 @@ npx playwright test --project=chromium
 ### Browser Installation Issues
 
 ```bash
-# Reinstall Playwright browsers
+# Reinstall Playwright browsers with system dependencies
 npx playwright install --with-deps
 
-# For specific browser
+# For a specific browser
 npx playwright install chromium
 ```
 
 ### Trace Viewer for Debugging
 
-Failed tests automatically collect traces. View them with:
+Failed tests automatically collect traces on the first retry. View them with:
 
 ```bash
 npx playwright show-trace test-results/<trace-file>.zip
@@ -495,9 +498,9 @@ npx playwright --version
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `@playwright/test` | 1.58.2 | Test framework and assertions |
-| `@types/node` | 25.2.3 | TypeScript Node.js type definitions |
-| `typescript` | 5.9.3 | TypeScript compiler |
+| `@playwright/test` | ^1.58.2 | Test framework and assertions |
+| `@types/node` | ^25.2.3 | TypeScript Node.js type definitions |
+| `typescript` | ^5.9.3 | TypeScript compiler |
 
 ## Best Practices
 
@@ -514,18 +517,18 @@ npx playwright --version
 When adding new tests:
 
 1. Create corresponding page objects for new pages/components
-2. Follow the existing naming conventions
-3. Add tests to appropriate test suite file
+2. Follow the existing naming conventions (`<name>.page.ts`, `<name>.spec.ts`)
+3. Add tests to the appropriate test suite file
 4. Update this README with new test suite descriptions
 5. Ensure all tests pass locally before pushing
 
 ## License
 
-This project is provided as-is for testing and educational purposes.
+This project is licensed under the [MIT License](LICENSE).
 
 ## Contact & Support
 
 For issues or questions:
 - Check existing test cases for examples
 - Review Playwright documentation: https://playwright.dev
-- Check the GitHub repository for known issues
+- Open an issue at: https://github.com/vinayms96/saucedemo_playwright/issues
