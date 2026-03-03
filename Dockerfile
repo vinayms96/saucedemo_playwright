@@ -2,10 +2,10 @@ FROM mcr.microsoft.com/playwright:v1.58.2-noble
 
 WORKDIR /app
 
-COPY . /app/
+COPY package*.json ./
 
 RUN npm ci
 
-VOLUME [ "/app/playwright-report" ]
+COPY . .
 
 CMD [ "npx", "playwright", "test" ]
