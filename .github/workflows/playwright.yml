@@ -26,7 +26,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: normal-playwright-report
-          path: normal-playwright-report/
+          path: playwright-report/
           retention-days: 30
   docker-test:
     environment: prod
